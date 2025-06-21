@@ -78,7 +78,7 @@
       deviceSpan.textContent = deviceName;
       deviceContainer.classList.remove('hidden');
 
-      ws = new WebSocket(`ws://localhost:3000/ws/${deviceName}`);
+ws = new WebSocket(`wss://back-9n0o.onrender.com/ws/${deviceName}`);
 
       ws.onopen = () => {
         dashboard.classList.remove('hidden');
