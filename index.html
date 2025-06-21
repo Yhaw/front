@@ -30,23 +30,15 @@
     <div id="dashboard" class="hidden space-y-6">
       <!-- Temperature Card -->
       <div class="p-4 rounded-lg shadow-inner bg-gradient-to-br from-blue-50 to-blue-100 border flex items-center justify-between">
-        <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-4">
           <span class="text-blue-700 text-3xl">🌡️</span>
           <div>
             <p class="text-sm text-gray-600">Current Temperature</p>
-            <p id="temp" class="text-2xl font-bold animate-pulse text-gray-700">-- °C</p>
+            <p id="tempC" class="text-xl font-semibold text-gray-700">-- °C</p>
+            <p id="tempF" class="text-md font-medium text-gray-500">-- °F</p>
           </div>
         </div>
       </div>
-
-      <!-- LED Buttons -->
-      <!-- <div class="bg-gray-50 p-4 rounded-md border space-y-4">
-        <p class="text-lg font-medium">💡 LED Control</p>
-        <div class="flex gap-4">
-          <button onclick="sendLEDCommand('led_on')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md">Turn On</button>
-          <button onclick="sendLEDCommand('led_off')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md">Turn Off</button>
-        </div>
-      </div> -->
     </div>
   </div>
 
@@ -59,7 +51,8 @@
     const dashboard = document.getElementById('dashboard');
     const deviceContainer = document.getElementById('deviceContainer');
     const deviceSpan = document.getElementById('device');
-    const tempDisplay = document.getElementById('temp');
+    const tempC = document.getElementById('tempC');
+    const tempF = document.getElementById('tempF');
     const wsStatus = document.getElementById('wsStatus');
 
     function updateWsStatus(isConnected) {
@@ -78,7 +71,7 @@
       deviceSpan.textContent = deviceName;
       deviceContainer.classList.remove('hidden');
 
-ws = new WebSocket(`wss://back-9n0o.onrender.com/ws/${deviceName}`);
+      ws = new WebSocket(`wss://back-9n0o.onrender.com/ws/${deviceName}`);
 
       ws.onopen = () => {
         dashboard.classList.remove('hidden');
@@ -89,8 +82,10 @@ ws = new WebSocket(`wss://back-9n0o.onrender.com/ws/${deviceName}`);
         try {
           const data = JSON.parse(event.data);
           if (data.temp !== undefined) {
-            tempDisplay.textContent = `${data.temp.toFixed(2)} °C`;
-            tempDisplay.classList.remove('animate-pulse');
+            const c = parseFloat(data.temp).toFixed(2);
+            const f = ((parseFloat(c) * 9) / 5 + 32).toFixed(2);
+            tempC.textContent = `${c} °C`;
+            tempF.textContent = `${f} °F`;
           }
         } catch (err) {
           console.error('Invalid message:', event.data);
@@ -100,15 +95,6 @@ ws = new WebSocket(`wss://back-9n0o.onrender.com/ws/${deviceName}`);
       ws.onclose = () => updateWsStatus(false);
       ws.onerror = () => updateWsStatus(false);
     };
-
-    function sendLEDCommand(cmd) {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log("Sending:", cmd);
-        ws.send(cmd);
-      } else {
-        alert("WebSocket not connected");
-      }
-    }
 
     function copyDevice() {
       const text = deviceSpan.textContent;
