@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <title>Pico W IoT Dashboard</title>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans min-h-screen flex items-center justify-center">
+  <div class="bg-white p-6 rounded-xl shadow-xl w-full max-w-2xl space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <h1 class="text-xl font-bold text-blue-700">🌐 Pico W IoT Dashboard</h1>
+      <span id="wsStatus" class="text-sm px-3 py-1 rounded-full bg-red-200 text-red-800">Disconnected</span>
+    </div>
+
+    <!-- Username Input & Connect -->
+    <div class="flex gap-2">
+      <input id="username" class="flex-1 p-3 border rounded-md" placeholder="Enter your name" />
+      <button id="connect" class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition">Connect</button>
+    </div>
+
+    <!-- Device ID -->
+    <div id="deviceContainer" class="hidden flex items-center justify-between bg-gray-100 p-3 rounded-md border">
+      <div class="text-sm text-gray-600">Device ID: <span id="device" class="font-mono font-medium"></span></div>
+      <button onclick="copyDevice()" class="text-blue-600 hover:text-blue-800">📋 Copy</button>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="hidden space-y-6">
+      <!-- Temperature Card -->
+      <div class="p-4 rounded-lg shadow-inner bg-gradient-to-br from-blue-50 to-blue-100 border flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <span class="text-blue-700 text-3xl">🌡️</span>
+          <div>
+            <p class="text-sm text-gray-600">Current Temperature</p>
+            <p id="temp" class="text-2xl font-bold animate-pulse text-gray-700">-- °C</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- LED Buttons -->
+      <div class="bg-gray-50 p-4 rounded-md border space-y-4">
+        <p class="text-lg font-medium">💡 LED Control</p>
+        <div class="flex gap-4">
+          <button onclick="sendLEDCommand('led_on')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md">Turn On</button>
+          <button onclick="sendLEDCommand('led_off')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md">Turn Off</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let ws;
+    let connected = false;
+
+    const connectBtn = document.getElementById('connect');
+    const usernameInput = document.getElementById('username');
+    const dashboard = document.getElementById('dashboard');
+    const deviceContainer = document.getElementById('deviceContainer');
+    const deviceSpan = document.getElementById('device');
+    const tempDisplay = document.getElementById('temp');
+    const wsStatus = document.getElementById('wsStatus');
+
+    function updateWsStatus(isConnected) {
+      connected = isConnected;
+      wsStatus.textContent = isConnected ? 'Connected' : 'Disconnected';
+      wsStatus.className = `text-sm px-3 py-1 rounded-full ${
+        isConnected ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'
+      }`;
+    }
+
+    connectBtn.onclick = () => {
+      const username = usernameInput.value.trim();
+      if (!username) return alert("Please enter your name");
+
+      const deviceName = `${username}-pico`;
+      deviceSpan.textContent = deviceName;
+      deviceContainer.classList.remove('hidden');
+
+      ws = new WebSocket(`ws://localhost:3000/ws/${deviceName}`);
+
+      ws.onopen = () => {
+        dashboard.classList.remove('hidden');
+        updateWsStatus(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.temp !== undefined) {
+            tempDisplay.textContent = `${data.temp.toFixed(2)} °C`;
+            tempDisplay.classList.remove('animate-pulse');
+          }
+        } catch (err) {
+          console.error('Invalid message:', event.data);
+        }
+      };
+
+      ws.onclose = () => updateWsStatus(false);
+      ws.onerror = () => updateWsStatus(false);
+    };
+
+    function sendLEDCommand(cmd) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        console.log("Sending:", cmd);
+        ws.send(cmd);
+      } else {
+        alert("WebSocket not connected");
+      }
+    }
+
+    function copyDevice() {
+      const text = deviceSpan.textContent;
+      navigator.clipboard.writeText(text)
+        .then(() => alert(`Copied "${text}" to clipboard`))
+        .catch(() => alert("Failed to copy"));
+    }
+  </script>
+</body>
+</html>
